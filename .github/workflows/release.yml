@@ -1,0 +1,55 @@
+name: Publish release images
+on:
+  release:
+    types: [published]
+permissions:
+  contents: read
+  checks: read
+  packages: write
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        service: [api, frontend, whatsapp]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - name: Require production readiness checks
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execFileSync } = require('node:child_process');
+            const ref = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+            const { data } = await github.rest.checks.listForRef({ ...context.repo, ref, filter: 'all', per_page: 100 });
+            for (const name of ['frontend', 'api', 'whatsapp', 'production-smoke']) {
+              if (!data.check_runs.some(run => run.name === name && run.conclusion === 'success' && run.app?.slug === 'github-actions')) {
+                throw new Error(`Missing successful ${name} check for release commit ${ref}`);
+              }
+            }
+      - name: Resolve image name
+        id: image
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          SERVICE: ${{ matrix.service }}
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          printf 'name=ghcr.io/%s-%s\n' "${GITHUB_REPOSITORY,,}" "$SERVICE" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.service == 'whatsapp' && 'apps/whatsapp' || '.' }}
+          file: apps/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.image.outputs.name }}:${{ github.event.release.tag_name }}
+            ${{ steps.image.outputs.name }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.version=${{ github.event.release.tag_name }}

@@ -1,0 +1,16 @@
+.git
+.env*
+**/node_modules
+**/dist
+**/dist-stale*
+**/coverage
+**/test-results
+**/playwright-report
+.tmp*
+tmp-*
+uploads
+*.zip
+*.sql
+*.dump
+release_bundle*
+Crisis-platform bundle

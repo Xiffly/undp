@@ -1,0 +1,93 @@
+name: Production readiness
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  frontend:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+      - run: npm ci
+        working-directory: apps/frontend
+      - run: npm audit --omit=dev --audit-level=high && npm run lint && npm run typecheck && npm run typecheck:strict && npm run typecheck:test && npm test && npm run build
+        working-directory: apps/frontend
+  api:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: crisis_user
+          POSTGRES_DB: crisis_db
+          POSTGRES_PASSWORD: ci-database-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U crisis_user -d crisis_db"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://crisis_user:ci-database-only@localhost:5432/crisis_db
+      JWT_SECRET: ci-only-jwt-secret-at-least-32-characters
+      ADMIN_EMAIL: bootstrap-admin@local
+      ADMIN_PASSWORD: change-me-to-a-strong-password
+      CONTRIBUTOR_KEY_SALT: ci-only-contributor-salt-at-least-32-characters
+      CONFIRM_IP_SALT: ci-only-confirm-salt-at-least-32-characters
+      AI_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+      - run: npm ci
+        working-directory: apps/api
+      - run: npm audit --omit=dev --audit-level=high && npm run lint && npm run typecheck && npm run typecheck:strict && npm run build
+        working-directory: apps/api
+      - run: npm test -- --no-file-parallelism
+        working-directory: apps/api
+      - run: bash -n deploy.sh scripts/*.sh scripts/tests/*.sh && bash scripts/tests/deploy.test.sh && bash scripts/tests/backup.test.sh
+  whatsapp:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/whatsapp/package-lock.json
+      - run: npm ci && npm audit --omit=dev --audit-level=high && npm run lint && npm run typecheck && npm test && npm run build
+        working-directory: apps/whatsapp
+  production-smoke:
+    runs-on: ubuntu-24.04
+    needs: [frontend, api, whatsapp]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+      - run: npm ci && npx playwright install --with-deps chromium
+        working-directory: apps/frontend
+      - run: bash scripts/production-smoke.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production-smoke-results
+          path: |
+            apps/frontend/playwright-report/
+            apps/frontend/test-results/
+            .tmp-production-smoke/stack.log
+          retention-days: 7

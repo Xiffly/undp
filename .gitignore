@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+
+# Build outputs and caches
+dist/
+dist-next/
+dist-stale/
+dist-stale-*/
+coverage/
+.vite/
+*.tsbuildinfo
+playwright-report/
+test-results/
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
+apps/api/uploads/*
+!apps/api/uploads/.gitkeep
+
+# Mobile build folders
+apps/web/android/
+apps/web/ios/
+apps/frontend/android/
+apps/frontend/ios/
+
+# Logs and local temp files
+*.log
+*.out
+*.err
+tmp-*
+.tmp*
+
+# Local release bundles and database snapshots
+*.zip
+*.dump
+*.sql
+!apps/api/src/migrations/*.sql
+/release_bundle*/
+/Crisis-platform bundle/
+/uploads_mvp_only/
+users.txt
+
+# Internal submission audit (not part of the source repository)
+docs/checklist-audit.md
+
+# Generated deployment config
+nginx/runtime/
+
+# OS/editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+~$*.docx
+__pycache__/
+*.pyc

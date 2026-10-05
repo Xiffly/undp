@@ -1,0 +1,57 @@
+{
+  "name": "undp-crisis-api",
+  "version": "1.0.0",
+  "description": "UNDP Community Crisis Assessment Platform - REST API",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "lint": "eslint \"src/**/*.ts\"",
+    "build": "node scripts/prepare-dist.cjs && tsc",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "seed:demo:reports": "tsx scripts/resetSeedDemoReports.ts",
+    "seed:synthetic": "tsx src/scripts/seedSyntheticReports.ts",
+    "seed:synthetic:dist": "node dist/scripts/seedSyntheticReports.js",
+    "bundle:mvp:media": "tsx src/scripts/prepareMinimalMvpMedia.ts",
+    "typecheck:strict": "tsc -p tsconfig.strict.json --noEmit",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "tsx src/scripts/migrate.ts up",
+    "db:rollback": "tsx src/scripts/migrate.ts down",
+    "db:status": "tsx src/scripts/migrate.ts status"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.922.0",
+    "@aws-sdk/s3-request-presigner": "^3.922.0",
+    "@sentry/node": "^11.4.0",
+    "@types/bcryptjs": "^2.4.6",
+    "axios": "^1.13.6",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "express": "^4.18.3",
+    "express-rate-limit": "^7.2.0",
+    "express-validator": "^7.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "pg": "^8.16.3",
+    "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/node": "^20.11.30",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.20.5",
+    "typescript": "^5.4.3",
+    "vitest": "^4.1.11",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.5.0",
+    "globals": "^17.6.0",
+    "typescript-eslint": "^8.61.1"
+  },
+  "overrides": {
+    "path-to-regexp": "0.1.13",
+    "qs": "^6.15.4",
+    "esbuild": "^0.28.1"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "strict": true, "noEmit": true },
+  "include": [
+    "src/middleware/auth.ts", "src/dbRuntime.ts", "src/services/adminSessions.ts",
+    "src/types/**/*.ts", "src/ai/classification.ts", "src/observability/**/*.ts",
+    "src/migrations/**/*.ts", "src/config.ts"
+  ],
+  "exclude": ["src/**/*.test.ts", "node_modules", "dist"]
+}

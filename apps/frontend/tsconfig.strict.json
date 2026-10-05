@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "strict": true, "noEmit": true },
+  "include": ["src/store/auth.ts", "src/types.ts", "src/components/submit/formModel.ts"],
+  "exclude": ["node_modules", "dist"]
+}

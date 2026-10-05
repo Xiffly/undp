@@ -1,0 +1,97 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=crisis_db
+      - POSTGRES_USER=crisis_user
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Set POSTGRES_PASSWORD in .env}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "3003:3001"
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/repo/uploads
+    environment:
+      - PORT=3001
+      - JWT_SECRET=${JWT_SECRET?Set JWT_SECRET in .env}
+      - ADMIN_EMAIL=${ADMIN_EMAIL?Set ADMIN_EMAIL in .env}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD?Set ADMIN_PASSWORD in .env}
+      - WHATSAPP_SERVICE_TOKEN=${WHATSAPP_SERVICE_TOKEN:-local-whatsapp-integration-token}
+      - STRICT_INTEGRATIONS=true
+      - AI_API_KEY=${AI_API_KEY:-}
+      - AI_PROVIDER=${AI_PROVIDER:-openrouter}
+      - AI_MODEL_VISION=${AI_MODEL_VISION:-google/gemma-4-26b-a4b-it:free}
+      - AI_MODEL_TEXT=${AI_MODEL_TEXT:-qwen/qwen3-next-80b-a3b-instruct:free}
+      - AI_CLASSIFY_MODELS=${AI_CLASSIFY_MODELS:-google/gemma-4-26b-a4b-it:free,google/gemma-4-31b-it:free,nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free}
+      - AI_SITREP_MODELS=${AI_SITREP_MODELS:-nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free,nvidia/nemotron-nano-12b-v2-vl:free}
+      - AI_ENABLED=${AI_ENABLED:-true}
+      - AI_CLASSIFY_MAX_PER_MINUTE=${AI_CLASSIFY_MAX_PER_MINUTE:-20}
+      - AI_CLASSIFY_MAX_PER_DAY=${AI_CLASSIFY_MAX_PER_DAY:-1000}
+      - AI_CLASSIFY_POLL_MS=${AI_CLASSIFY_POLL_MS:-15000}
+      - AUTH_RATE_LIMIT_MAX=${AUTH_RATE_LIMIT_MAX:-10}
+      - MEDIA_BACKEND=${MEDIA_BACKEND:-local}
+      - MEDIA_PUBLIC_BASE_URL=${MEDIA_PUBLIC_BASE_URL:-}
+      - MEDIA_SIGNED_URL_TTL_SECONDS=${MEDIA_SIGNED_URL_TTL_SECONDS:-900}
+      - S3_BUCKET=${S3_BUCKET:-}
+      - S3_REGION=${S3_REGION:-auto}
+      - S3_ENDPOINT=${S3_ENDPOINT:-}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID:-}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY:-}
+      - CONTRIBUTOR_KEY_SALT=${CONTRIBUTOR_KEY_SALT?Set CONTRIBUTOR_KEY_SALT in .env}
+      - CONFIRM_IP_SALT=${CONFIRM_IP_SALT?Set CONFIRM_IP_SALT in .env}
+      - ABUSE_MAX_REPORTS_PER_HOUR=${ABUSE_MAX_REPORTS_PER_HOUR:-8}
+      - ABUSE_MAX_REPORTS_PER_DAY=${ABUSE_MAX_REPORTS_PER_DAY:-25}
+      - ABUSE_REPEAT_WINDOW_MINUTES=${ABUSE_REPEAT_WINDOW_MINUTES:-30}
+      - DATABASE_URL=postgresql://crisis_user:${POSTGRES_PASSWORD}@postgres:5432/crisis_db
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  whatsapp:
+    build:
+      context: ./apps/whatsapp
+      dockerfile: Dockerfile
+    ports:
+      - "3010:3010"
+    environment:
+      - WHATSAPP_PORT=3010
+      - API_BASE_URL=http://api:3001
+      - WHATSAPP_SERVICE_TOKEN=${WHATSAPP_SERVICE_TOKEN:-local-whatsapp-integration-token}
+      - WHATSAPP_USE_STUB=true
+      - WHATSAPP_VERIFY_TOKEN=${WHATSAPP_VERIFY_TOKEN:-dev-verify-token}
+      - WHATSAPP_TOKEN=${WHATSAPP_TOKEN:-dev-token}
+      - WHATSAPP_PHONE_ID=${WHATSAPP_PHONE_ID:-dev-phone-id}
+    depends_on:
+      - api
+    restart: unless-stopped
+
+networks:
+  default:
+    name: undp-crisis-network
+
+volumes:
+  postgres_data:

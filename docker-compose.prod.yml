@@ -1,0 +1,105 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    expose:
+      - "5432"
+    env_file:
+      - ${ENV_FILE:-.env}
+    environment:
+      - POSTGRES_DB=crisis_db
+      - POSTGRES_USER=crisis_user
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crisis_user -d crisis_db"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    expose:
+      - "3001"
+    volumes:
+      - crisis_data:/app/data
+      - crisis_uploads:/repo/uploads
+    env_file:
+      - ${ENV_FILE:-.env}
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+      - STRICT_INTEGRATIONS=true
+      - AUTH_RATE_LIMIT_MAX=${AUTH_RATE_LIMIT_MAX:-10}
+      - DATABASE_URL=postgresql://crisis_user:${POSTGRES_PASSWORD}@postgres:5432/crisis_db
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - internal
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+      args:
+        - VITE_API_URL=
+        - VITE_SITE_URL=${APP_BASE_URL:-https://crisis-platform.com}
+        - VITE_SITE_NAME=${VITE_SITE_NAME:-UNDP Crisis Reporter}
+        - VITE_SITE_DESCRIPTION=${VITE_SITE_DESCRIPTION:-Report crisis damage in your community. Help response teams act faster with verified field information.}
+        - VITE_SEO_ALLOW_INDEXING=${VITE_SEO_ALLOW_INDEXING:-false}
+        - VITE_SEO_BLOCK_AI=${VITE_SEO_BLOCK_AI:-true}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ${NGINX_CONFIG_PATH:-./nginx/runtime/active.conf}:/etc/nginx/conf.d/default.conf:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_certs:/etc/letsencrypt:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - internal
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_certs:/etc/letsencrypt
+    entrypoint: >
+      /bin/sh -c "trap exit TERM;
+      while :; do
+        certbot renew --webroot -w /var/www/certbot --quiet;
+        sleep 12h & wait $${!};
+      done"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  crisis_data:
+    driver: local
+  crisis_uploads:
+    driver: local
+  certbot_www:
+    driver: local
+  certbot_certs:
+    driver: local
+
+networks:
+  internal:
+    driver: bridge

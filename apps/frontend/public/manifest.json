@@ -1,0 +1,34 @@
+{
+  "name": "UNDP Crisis Reporter",
+  "short_name": "Crisis Reporter",
+  "description": "Community-powered crisis damage assessment for faster humanitarian response",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#00205b",
+  "theme_color": "#009edb",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "categories": ["utilities", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Submit Report",
+      "short_name": "Submit",
+      "description": "Report new damage",
+      "url": "/submit",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Crisis Map",
+      "short_name": "Map",
+      "description": "View damage map",
+      "url": "/map",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
